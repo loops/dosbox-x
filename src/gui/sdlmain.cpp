@@ -1084,8 +1084,9 @@ void GFX_SetTitle(int32_t cycles, int frameskip, Bits timing, bool paused) {
         else
             sprintf(p,"%d cycles/ms", (int)internal_cycles);
     } else
-        sprintf(title,"%s%sDOSBox-X", dosbox_title.c_str(),dosbox_title.empty()?"":" - ");
+        sprintf(title,"%s", dosbox_title.c_str());
 
+    if (0) { // Want really simple title
     if (!menu.hidecycles) {
         char *p = title + strlen(title); // append to end of string
 
@@ -1115,6 +1116,7 @@ void GFX_SetTitle(int32_t cycles, int frameskip, Bits timing, bool paused) {
 #if C_DEBUG
     if (IsDebuggerActive()) strcat(title," DEBUGGER");
 #endif
+}
 #if defined(C_SDL2)
     SDL_SetWindowTitle(sdl.window,title);
 #else

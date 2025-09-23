@@ -3755,6 +3755,7 @@ static void GUI_StartUp() {
     if (!strcmp(clip_mouse_button, "middle")) mbutton=2;
     else if (!strcmp(clip_mouse_button, "right")) mbutton=3;
     else if (!strcmp(clip_mouse_button, "arrows")) mbutton=4;
+    else if (!strcmp(clip_mouse_button, "left")) mbutton=5;
     else mbutton=0;
     modifier = section->Get_string("clip_key_modifier");
     const char *pastebios = section->Get_string("clip_paste_bios");
@@ -4715,6 +4716,7 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
         GFX_SDLMenuTrackHover(mainMenu,DOSBoxMenu::unassigned_item_handle);
     }
 
+    // SBE - disable this??
     if (button->button == SDL_BUTTON_LEFT) {
         if (button->state == SDL_PRESSED) {
             GFX_SDLMenuTrackHilight(mainMenu,mainMenu.menuUserHoverAt);
@@ -5214,7 +5216,9 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
                 fx = fy = -1;
             }
 		}
-		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE) || (mbutton==3 && button->button == SDL_BUTTON_RIGHT)) && isModifierApplied()) {
+		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE) ||
+                                    (mbutton==3 && button->button == SDL_BUTTON_RIGHT) ||
+                                    (mbutton==5 && button->button == SDL_BUTTON_LEFT)) && isModifierApplied()) {
 			mouse_start_x=motion->x;
 			mouse_start_y=motion->y;
 			break;
@@ -5316,25 +5320,21 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
         break;
     case SDL_RELEASED:
 #if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
-		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE) || (mbutton==3 && button->button == SDL_BUTTON_RIGHT)) && mouse_start_x >= 0 && mouse_start_y >= 0) {
+		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE)||
+                    (mbutton==3 && button->button == SDL_BUTTON_RIGHT) ||
+                    (mbutton==5 && button->button == SDL_BUTTON_LEFT)) && mouse_start_x >= 0 && mouse_start_y >= 0) {
 			mouse_end_x=motion->x;
 			mouse_end_y=motion->y;
-			if (mouse_start_x == mouse_end_x && mouse_start_y == mouse_end_y) {
-				PasteClipboard(true);
+            if (abs(mouse_end_x - mouse_start_x) + abs(mouse_end_y - mouse_start_y)<5) {
+                if (0) // SBE - No mouse pasting
+                    PasteClipboard(true);
 #ifdef USE_TTF
-				if (ttf.inUse) resetFontSize();
+                if (ttf.inUse) resetFontSize();
 #endif
-			} else {
-				if (abs(mouse_end_x - mouse_start_x) + abs(mouse_end_y - mouse_start_y)<5) {
-					PasteClipboard(true);
-#ifdef USE_TTF
-					if (ttf.inUse) resetFontSize();
-#endif
-				} else
-					CopyClipboard(0);
-				if (fx >= 0 && fy >= 0)
-					Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, false);
-			}
+            } else
+                CopyClipboard(0);
+            if (fx >= 0 && fy >= 0)
+                Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, false);
 			mouse_start_x = -1;
 			mouse_start_y = -1;
 			mouse_end_x = -1;
@@ -6622,7 +6622,7 @@ void SDL_SetupConfigSection() {
     Pstring->Set_values(unlocks);
     Pstring->SetBasic(true);
 
-	const char* clipboardbutton[] = { "none", "middle", "right", "arrows", nullptr };
+	const char* clipboardbutton[] = { "none", "middle", "right", "arrows", "left", nullptr };
 	Pstring = sdl_sec->Add_string("clip_mouse_button",Property::Changeable::Always, "right");
 	Pstring->Set_values(clipboardbutton);
 	Pstring->Set_help("Select the mouse button or use arrow keys for the shared clipboard copy/paste function.\n"

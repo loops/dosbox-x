@@ -526,7 +526,7 @@ void PasteClipboard(bool bPressed)
     }
     CloseClipboard();
 }
-/// TODO: add menu items here 
+/// TODO: add menu items here
 #else // end emendelson from dbDOS; improved by Wengier
 #if defined(WIN32) // SDL2, MinGW / Added by Wengier
 void PasteClipboard(bool bPressed) {
@@ -585,6 +585,10 @@ void PasteClipboard(bool bPressed) {
     std::string result="", pre="";
     morelen=true;
     for (unsigned int i=0; i<strlen(text); i++) {
+        /* Limits for pasting in BookExpert, one line only, max 80 characters */
+        if (text[i]==0x0A||text[i]==0x0D) break;
+        if (text[i]<' ') continue;
+        if (i > 80) break;
         if (swapad&&text[i]==0x0A&&(i==0||text[i-1]!=0x0D)) text[i]=0x0D;
         if (text[i]==9) result+="    ";
         else if (text[i]<0) {

@@ -507,7 +507,11 @@ void PasteClipboard(bool bPressed)
         // Create a copy of the string, and filter out Linefeed characters (ASCII '10')
         char* szFilteredText = reinterpret_cast<char*>(alloca(clipSize + j*3 + 1));
         char* szFilterNextChar = szFilteredText;
-        for (size_t i = 0; i < clipSize; ++i)
+        for (size_t i = 0; i < clipSize; ++i) {
+            /* Limits for pasting in BookExpert, one line only, max 80 characters */
+            if (clipAscii[i]==0x0A||clipAscii[i]==0x0D) break;
+            if (clipAscii[i]<' ') continue;
+            if (i > 80) break;
             if (clipAscii[i] == 9) // Tab to spaces
                 for (int k=0; k<4; k++) {
                     *szFilterNextChar = ' ';
@@ -518,6 +522,7 @@ void PasteClipboard(bool bPressed)
                 *szFilterNextChar = clipAscii[i];
                 ++szFilterNextChar;
             }
+        }
         *szFilterNextChar = '\0'; // Cap it.
 
         strPasteBuffer.append(szFilteredText);
@@ -548,7 +553,11 @@ void PasteClipboard(bool bPressed) {
         if (ret&&clipAscii[clipSize-1]==0xD) clipAscii[--clipSize]=0;
         char* szFilteredText = reinterpret_cast<char*>(alloca(clipSize + j*3 + 1));
         char* szFilterNextChar = szFilteredText;
-        for (size_t i = 0; i < clipSize; ++i)
+        for (size_t i = 0; i < clipSize; ++i) {
+            /* Limits for pasting in BookExpert, one line only, max 80 characters */
+            if (clipAscii[i]==0x0A||clipAscii[i]==0x0D) break;
+            if (clipAscii[i]<' ') continue;
+            if (i > 80) break;
             if (clipAscii[i] == 9) // Tab to spaces
                 for (int k=0; k<4; k++) {
                     *szFilterNextChar = ' ';
@@ -559,6 +568,7 @@ void PasteClipboard(bool bPressed) {
                 *szFilterNextChar = clipAscii[i];
                 ++szFilterNextChar;
             }
+        }
         *szFilterNextChar = '\0'; // Cap it.
 
         strPasteBuffer.append(szFilteredText);

@@ -914,6 +914,8 @@ bool                        startup_state_numlock = false; // Global for keyboar
 bool                        startup_state_capslock = false; // Global for keyboard initialisation
 bool                        startup_state_scrlock = false; // Global for keyboard initialisation
 int mouse_start_x=-1, mouse_start_y=-1, mouse_end_x=-1, mouse_end_y=-1, fx=-1, fy=-1, paste_speed=20, wheel_key=0, mbutton=3;
+int word_x1=-1, word_x2=-1, word_y=-1;
+unsigned int word_fg=0, word_bg=0;
 bool wheel_guest = false, clipboard_dosapi = true, clipboard_biospaste =
 #if defined (WIN32) && (!defined(__MINGW32__) || defined(__MINGW64_VERSION_MAJOR))
 false;
@@ -4513,7 +4515,7 @@ static void HandleMouseMotion(SDL_MouseMotionEvent * motion) {
     else {
         inputToScreen = GFX_CursorInOrNearScreen(motion->x,motion->y);
 #if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
-		if (mouse_start_x >= 0 && mouse_start_y >= 0) {
+		if (mouse_start_x >= 0 && mouse_start_y >= 0 && word_y == -1) {
 			if (fx>=0 && fy>=0)
 				Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, false);
 			Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,motion->x-sdl.clip.x,motion->y-sdl.clip.y,sdl.clip.w,sdl.clip.h, true);
@@ -4696,6 +4698,29 @@ static void HandleMouseWheel(bool normal, int amount) {
     }
 }
 
+static void ClearWordSelection(Bitu /*none*/)
+{
+	if (word_y != -1) {
+		Mouse_Select(word_x1,word_y,word_x2,word_y,-1,-1, false);
+		word_x1 = word_x2 = -1;
+		fx = fy = mouse_start_x = mouse_start_y = mouse_end_x = mouse_end_y = -1;
+		word_y = -1;
+	}
+}
+
+static void SelectWord()
+{
+	Mouse_Select( word_x1, word_y, word_x2, word_y,-1,-1, true);
+	selscol = word_x1; selecol = word_x2; selsrow = word_y; selerow = word_y;
+	CopyClipboard(1);
+	selscol = selecol = selsrow = selerow = -1;
+	PIC_AddEvent(ClearWordSelection,1000.0);
+}
+
+static bool is_wanted_char(char c)
+{
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '/' || c == '.' || c == '-';
+}
 static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEvent * motion) {
 #if !defined(WIN32)
     (void)motion;
@@ -5204,7 +5229,7 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
 
     switch (button->state) {
     case SDL_PRESSED:
-        if (inMenu || !inputToScreen) return;
+        if (inMenu || !inputToScreen || word_y != -1) return;
 #if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
 		if (!sdl.mouse.locked && button->button == SDL_BUTTON_LEFT && isModifierApplied()) {
             if (mbutton==4 && selsrow>-1 && selscol>-1) {
@@ -5321,28 +5346,64 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
         }
         break;
     case SDL_RELEASED:
+		if (word_y >=0) {
+			fx = fy = mouse_start_x = mouse_start_y = mouse_end_x = mouse_end_y = -1;
+			int c = ttf.cols *motion->x/currentWindowWidth;
+			int r = ttf.lins *motion->y/currentWindowHeight;
+			if (c >= word_x1 && c <= word_x2 && r == word_y) {
+				PIC_RemoveEvents(ClearWordSelection);
+				if (word_y >= 0)
+					Mouse_Select( word_x1, word_y, word_x2, word_y,-1,-1, false);
+
+				ttf_cell *curAC = &newAttrChar[word_y*ttf.cols];
+				while(word_x1>0&&curAC[word_x1-1].fg == word_fg && curAC[word_x1-1].bg == word_bg && !(curAC[word_x1].chr == ' ' && curAC[word_x1-1].chr == ' '))
+					word_x1--;
+				if(curAC[word_x1].chr == ' ')
+						word_x1++;
+				while(((unsigned int)(word_x2+1))<ttf.cols&&curAC[word_x2+1].fg == word_fg && curAC[word_x2+1].bg == word_bg && !(curAC[word_x2].chr == ' ' && curAC[word_x2+1].chr == ' '))
+					word_x2++;
+				if(curAC[word_x2].chr == ' ')
+						word_x2--;
+				SelectWord();
+			}
+			break;
+		}
 #if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
 		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE)||
                     (mbutton==3 && button->button == SDL_BUTTON_RIGHT) ||
                     (mbutton==5 && button->button == SDL_BUTTON_LEFT)) && mouse_start_x >= 0 && mouse_start_y >= 0) {
 			mouse_end_x=motion->x;
 			mouse_end_y=motion->y;
-            if (abs(mouse_end_x - mouse_start_x) + abs(mouse_end_y - mouse_start_y)<5) {
-                if (0) // SBE - No mouse pasting
-                    PasteClipboard(true);
+            if (abs(mouse_end_x - mouse_start_x) + abs(mouse_end_y - mouse_start_y)<5 && fx<0 && fy < 0) {
 #ifdef USE_TTF
                 if (ttf.inUse) resetFontSize();
 #endif
-            } else
-                CopyClipboard(0);
-            if (fx >= 0 && fy >= 0)
-                Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, false);
-			mouse_start_x = -1;
-			mouse_start_y = -1;
-			mouse_end_x = -1;
-			mouse_end_y = -1;
-			fx = -1;
-			fy = -1;
+				uint16_t len=0;
+				int c1 = ttf.cols *mouse_start_x/currentWindowWidth;
+				int c2 = c1;
+				int r = ttf.lins *mouse_start_y/currentWindowHeight;
+
+				char* text = (char *) Mouse_GetSelected(0, r, ttf.cols-1, r,-1,-1, &len);
+				while (c1<len&&c1>0&&is_wanted_char(text[c1-1]))
+					c1--;
+				while (c2+1<len&&is_wanted_char(text[c2+1]))
+					c2++;
+				if (c1 != c2) {
+					word_x1 = c1;
+					word_x2 = c2;
+					word_y = r;
+					ttf_cell *curAC = &curAttrChar[word_y*ttf.cols];
+					word_fg = curAC[word_x1].fg;
+					word_bg = curAC[word_x1].bg;
+					SelectWord();
+				}
+			} else {
+				CopyClipboard(0);
+                if (fx >= 0 && fy >= 0)
+                    Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, false);
+            }
+
+			fx = fy = mouse_start_x = mouse_start_y = mouse_end_x = mouse_end_y = -1;
 			break;
 		}
 #endif

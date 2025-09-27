@@ -788,6 +788,12 @@ bool CodePageGuestToHostUTF8(char *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/);
 void CopyClipboard(int all) {
 	uint16_t len=0;
 	char* text = (char *)(all==2?Mouse_GetSelected(0,0,currentWindowWidth-1-sdl.clip.x,currentWindowHeight-1-sdl.clip.y,(int)(currentWindowWidth-sdl.clip.x),(int)(currentWindowHeight-sdl.clip.y), &len):(all==1?Mouse_GetSelected(selscol, selsrow, selecol, selerow, -1, -1, &len):Mouse_GetSelected(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,mouse_end_x-sdl.clip.x,mouse_end_y-sdl.clip.y,sdl.clip.w,sdl.clip.h, &len)));
+
+	// If users select "░" character which is a BookExpert space character during field input
+	for(int i=0; i< len; ++i)
+		if ((unsigned char)text[i] == 0xb0)
+			text[i] = ' ';
+
     std::string result="";
     std::istringstream iss(text);
     char temp[4096];

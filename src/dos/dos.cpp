@@ -1002,6 +1002,9 @@ void DOS_FlushSTDIN(void) {
     }
 }
 
+bool bookexpert_is_idle = false;        // Knows when BookExpert is idle, or working...
+Bitu bookexpert_idle_since = 0;
+static uint32_t detect_idle_loop = 0;
 static Bitu DOS_21Handler(void) {
     bool unmask_irq0 = false;
 
@@ -1011,6 +1014,19 @@ static Bitu DOS_21Handler(void) {
      *                  and reg_ah to auto type variables. */
     if (log_int21) {
         LOG(LOG_DOSMISC, LOG_DEBUG)("Executing interrupt 21, ah=%x, al=%x", reg_ah, reg_al);
+    }
+
+    // When BookExpert is in a tight idle loop, only these DOS calls are made
+    if ((reg_ah == 0x2a || reg_ah == 0x2c || reg_ah == 0x0b)) {
+        if (detect_idle_loop < 30) {
+            if (++detect_idle_loop >= 30) {
+                bookexpert_is_idle = true;
+                bookexpert_idle_since = PIC_Ticks;
+            }
+        }
+    } else {
+        bookexpert_is_idle=false;
+        detect_idle_loop=0;
     }
 
     /* Real MS-DOS behavior:

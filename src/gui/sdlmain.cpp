@@ -4513,14 +4513,14 @@ static void HandleMouseMotion(SDL_MouseMotionEvent * motion) {
     else if (vmware_mouse || sdl.mouse.locked || Mouse_GetButtonState() != 0)
         inputToScreen = true;
     else {
-        inputToScreen = GFX_CursorInOrNearScreen(motion->x,motion->y);
+		inputToScreen = GFX_CursorInOrNearScreen(motion->x,motion->y);
 #if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
 		if (mouse_start_x >= 0 && mouse_start_y >= 0 && word_y == -1) {
-			if (fx>=0 && fy>=0)
+			if (fx >= 0 && fy >=  0)
 				Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, false);
-			Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,motion->x-sdl.clip.x,motion->y-sdl.clip.y,sdl.clip.w,sdl.clip.h, true);
-			fx=motion->x;
-			fy=motion->y;
+			fx=std::max(0, std::min(motion->x,sdl.clip.x+sdl.clip.w-1));
+			fy=std::max(0, std::min(motion->y,sdl.clip.y+sdl.clip.h-1));
+			Mouse_Select(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h, true);
 		}
 #endif
 	}

@@ -590,6 +590,8 @@ void GFX_SelectFontByPoints(int ptsize) {
     ttf.pointsize = ptsize;
 	TTF_GlyphMetrics(ttf.SDL_font, 65, NULL, NULL, NULL, NULL, &ttf.width);
 	ttf.height = TTF_FontAscent(ttf.SDL_font)-TTF_FontDescent(ttf.SDL_font);
+	ttf.height -= 1;
+	ttf.width -= 1;
 	if (ttf.fullScrn) {
         unsigned int maxWidth, maxHeight;
         GetMaxWidthHeight(&maxWidth, &maxHeight);

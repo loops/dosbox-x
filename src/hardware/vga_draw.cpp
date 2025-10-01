@@ -6349,6 +6349,8 @@ static void VGA_VerticalTimer(Bitu /*val*/) {
 						// choose foreground color if blinking not set for this cell or blink on
 						Bitu foreground = (vga.draw.blink || (!(attr&0x80)) || ttf_dosv) ? (attr&0xf) : background;
 						// How about underline?
+						if (foreground==0 && background==0)
+							foreground ^= 0x7;
 						(*draw).fg = foreground;
 						(*draw).bg = background;
 						draw++;

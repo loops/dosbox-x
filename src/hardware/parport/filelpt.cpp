@@ -32,6 +32,8 @@
 #include "Shellapi.h"
 #endif
 
+extern bool bookexpert_is_idle;
+extern bool bookexpert_idle_since;
 extern std::string pathprt;
 void ResolvePath(std::string& in);
 CFileLPT::CFileLPT (Bitu nr, uint8_t initIrq, CommandLine* cmd, bool sq)
@@ -307,10 +309,24 @@ void CFileLPT::Write_IOSEL(Bitu val) {
     (void)val;//UNUSED
 	// not needed for file printing functionality
 }
+
 void CFileLPT::handleUpperEvent(uint16_t type) {
     (void)type;//UNUSED
 	if(fileOpen && timeout != 0) {
-		if(lastUsedTick + timeout < PIC_Ticks) {
+		// Demand that BookExpert be idle for timeout length, before considering auto close
+		if (wait_for_idle) {
+			if (!bookexpert_is_idle) {
+				setEvent(0, (float)timeout);
+				return;
+			}
+			if (bookexpert_idle_since + timeout > PIC_Ticks) {
+				float new_delay = (float)((timeout + 1) - (PIC_Ticks - bookexpert_idle_since));
+				setEvent(0, new_delay);
+				return;
+			}
+		}
+		// If there has been no new output for timeout length, auto close parallel port
+		if(lastUsedTick + timeout < PIC_Ticks ) {
 			if(addFF) {
 				fputc(12,file);
 			}

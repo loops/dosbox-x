@@ -45,8 +45,10 @@ CFileLPT::CFileLPT (Bitu nr, uint8_t initIrq, CommandLine* cmd, bool sq)
 	ack = false;
     squote = sq;
     shellhide = false;
+    wait_for_idle = false;
 
 	if(cmd->FindStringBegin("shellhide",str,false))	shellhide = true;
+	if(cmd->FindStringBegin("bxidle",str,false))	wait_for_idle = true;
 
 	// add a formfeed when closing?
 	if(cmd->FindStringBegin("addFF",str,false))	addFF = true;

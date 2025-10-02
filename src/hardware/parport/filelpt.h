@@ -43,6 +43,7 @@ public:
 	bool addFF;					// add a formfeed character before closing the file/device
 	bool addLF;					// if set, add line feed after carriage return if not used by app
     bool squote;
+    bool wait_for_idle;
 
 	uint8_t lastChar = 0;				// used to save the previous character to decide whether to add LF
 	const uint16_t* codepage_ptr; // pointer to the translation codepage if not null
